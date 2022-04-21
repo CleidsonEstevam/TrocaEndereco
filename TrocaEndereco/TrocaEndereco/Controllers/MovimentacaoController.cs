@@ -24,6 +24,8 @@ namespace TrocaEndereco.Controllers
             return View();
         }
 
+        #region "Modelo"
+
         [HttpGet]
         public FileResult ModeloExcel()
         {
@@ -94,7 +96,8 @@ namespace TrocaEndereco.Controllers
 
             return File(xlsResult, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", string.Format("MODELO_PARA_MOVIMENTAÇÃO_{0}_{1}.xlsx", DateTime.Now.ToString("ddMMyyyy"), DateTime.Now.ToString("hhmmss")));
         }
-
+        #endregion
+        
         [HttpPost]
         public async Task<List<Movimentacao>> ImportarExcel(IFormFile file)
         {
@@ -108,8 +111,12 @@ namespace TrocaEndereco.Controllers
                     {
                         ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
                         var rowcount = worksheet.Dimension.Rows;
-                        for (int row = 3; row <= rowcount; row++) 
+                        for (int row = 3; row < rowcount; row++) 
                         {
+                            if (worksheet.Cells[row, 1].Value == null) 
+                            {
+                                continue;
+                            }
                             var enderecoOrigem = worksheet.Cells[row, 1].Value;
                             var produto = worksheet.Cells[row, 2].Value;
                             var quantidade = worksheet.Cells[row, 3].Value;
@@ -140,27 +147,40 @@ namespace TrocaEndereco.Controllers
                 }
             }
              var ssesion = await SetSession(listarLinhas);
-            
             return listarLinhas;
         }
 
-        public async Task<Movimentacao> SetSession(List<Movimentacao> sessionValue)
+        [HttpGet]
+        public JsonResult Listar()
         {
-            try
+            var session = ISessionsExtensions.Get<Movimentacao>(HttpContext.Session, "list");
+            List<Movimentacao> listarLinhas = new List<Movimentacao>();
+            foreach (var item in session)
             {
-                await HttpContext.Session.LoadAsync();
-                ISessionsExtensions.Set(HttpContext.Session, "list", sessionValue);
-            }
-            catch (Exception ex)
-            {
+                var enderecoOrigem = item.EnderecoOrigem;
+                var produto = item.Produto;
+                var quantidade = item.Quantidade;
+                var enderecoDestino = item.EnderecoDestino;
+                var msgRetorno = item.MsgRetorno;
 
-                throw;
-            }
+                if (string.IsNullOrEmpty(msgRetorno))
+                {
+                    msgRetorno = "IMPORTADO COM SUCESSO!";
+                }
 
-            return null;
+                listarLinhas.Add(new Movimentacao
+                {
+                    EnderecoOrigem = Convert.ToString(enderecoOrigem).PadLeft(8, '0').ToUpper(),
+                    Produto = Convert.ToString(produto).PadLeft(6, '0'),
+                    Quantidade = Convert.ToString(quantidade),
+                    EnderecoDestino = Convert.ToString(enderecoDestino).PadLeft(8, '0').ToUpper(),
+                    MsgRetorno = msgRetorno
+                });
+            }
+            return Json(listarLinhas);
         }
 
-
+        #region "Valida Dados Planilha e da Insert"
         private string InserirDados(Movimentacao movi)
         {
             var movimentacao = new Movimentacao
@@ -173,104 +193,65 @@ namespace TrocaEndereco.Controllers
                 Data = movi.Data
             };
 
-            #region "Valida Dados Planilha"
-
             using var db = new MovimentacaoContext();
             var consultarProduto = db.Produto
                 .Where(p => p.Codigo == movi.Produto)
                 .AsNoTracking()
                 .ToList();
-
-            if (consultarProduto == null) 
+            if (consultarProduto.Count <= 0) 
             {
-               return movi.MsgRetorno = "Código do produto incorreto!";
+               return movi.MsgRetorno = "Erro! Código do produto incorreto!";
             }
 
             var consultarEnderecoO = db.Endereco
-              .Where(p => p.Local == movi.EnderecoOrigem);
-
-            if (consultarProduto == null)
+              .Where(p => p.Local == movi.EnderecoOrigem)
+              .AsNoTracking()
+              .ToList();
+            if (consultarEnderecoO.Count <= 0)
             {
-               return movi.MsgRetorno = "Endereco de origem não existe!";
+               return movi.MsgRetorno = "Erro! Endereco de origem não existe!";
             }
 
             var consultarEnderecoD = db.Endereco
-             .Where(p => p.Local == movi.EnderecoDestino);
-
-            if (consultarProduto == null)
+             .Where(p => p.Local == movi.EnderecoDestino)
+              .AsNoTracking()
+              .ToList();
+            if (consultarEnderecoD.Count <= 0)
             {
-                return movi.MsgRetorno = "Endereco de destino não existe!";
+                return movi.MsgRetorno = "Erro! Endereco de destino não existe!";
             }
 
-            #endregion
+            var consultarSaldo = db.Endereco
+            .Where(p => p.Produto == movi.Produto && p.Saldo == movi.Quantidade)
+             .AsNoTracking()
+             .ToList();
+            if (consultarEnderecoD.Count <= 0)
+            {
+                return movi.MsgRetorno = "Erro! Saldo incorreto!";
+            }
 
             db.Add(movimentacao);
             var registros = db.SaveChanges();
 
             return movi.MsgRetorno;
-
         }
+        #endregion
 
-        [HttpGet]
-        public JsonResult Listar()
+        #region "Métodos de session"
+        public async Task<Movimentacao> SetSession(List<Movimentacao> sessionValue)
         {
-
-            var session = ISessionsExtensions.Get<Movimentacao>(HttpContext.Session, "list");
-
-            List<Movimentacao> listarLinhas = new List<Movimentacao>();
-        
-            var dataTablesSource = new SourceDataTablesFormat();
-            foreach (var item in session)
+            try
             {
-                var enderecoOrigem = item.EnderecoOrigem;
-                var produto = item.Produto;
-                var quantidade = item.Quantidade;
-                var enderecoDestino = item.EnderecoDestino;
-
-                listarLinhas.Add(new Movimentacao
-                {
-                    EnderecoOrigem = Convert.ToString(enderecoOrigem).PadLeft(8, '0').ToUpper(),
-                    Produto = Convert.ToString(produto).PadLeft(6, '0'),
-                    Quantidade = Convert.ToString(quantidade).PadLeft(6, '0'),
-                    EnderecoDestino = Convert.ToString(enderecoDestino).PadLeft(8, '0').ToUpper(),
-                });
+                await HttpContext.Session.LoadAsync();
+                ISessionsExtensions.Set(HttpContext.Session, "list", sessionValue);
             }
+            catch (Exception ex)
+            {
 
-
-            //foreach (var item in session)
-            //{
-            //    IList<string> dataRow = new List<Movimentacao>();
-            //    var html = new StringBuilder();
-            //    dataRow.Add(item.EnderecoOrigem);
-            //    dataRow.Add(item.EnderecoDestino);
-            //    dataRow.Add(item.Quantidade);
-            //    dataRow.Add(item.Data);
-            //    dataRow.Add(item.Hora);
-            //    dataRow.Add(Convert.ToString(item.Hora));
-
-            //    if (!(item.MsgRetorno == "" || item.MsgRetorno == null))
-            //    {
-            //        dataRow.Add("PROCESSO CANCELADO!");
-            //        html.AppendFormat("<a class=\"btn-info btn-sm\" title=\"Editar Movimentação\"style=\"cursor:pointer\" onclick=\"Editar({0})\" id=\"btnEditar\" ><i class=\"fa fa-edit\"></i></a>&nbsp;", item.Id);
-            //        html.AppendFormat("<a class=\"btn-danger btn-sm\" title=\"Excluir Movimentação\"style=\"cursor:pointer\" onclick=\"Excluir(this)({0})\" id=\"btnEditar\" ><i class=\"fa fa-remove\"></i></a>&nbsp;", item.Id);
-            //    }
-            //    else
-            //    {
-            //        dataRow.Add("IMPORTADO COM SUCESSO!");
-            //    }
-            //    dataRow.Add(html.ToString());
-            //    dataTablesSource.aaData.Add(dataRow);
-            //}
-            //var retorno = new ReturnJson
-            //{
-            //    Sucesso = true,
-            //    TipoMensagem = "Sucesso",
-            //    Mensagem = "msgOperacaoConcluida",
-            //    SourceDataTablesFormat = dataTablesSource
-            //};
-            return Json(listarLinhas);
+                throw;
+            }
+            return null;
         }
-
         public async Task<Movimentacao[]> GetSession()
         {
 
@@ -279,7 +260,7 @@ namespace TrocaEndereco.Controllers
 
             return result;
         }
-
+        #endregion
     }
         
 }

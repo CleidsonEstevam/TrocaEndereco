@@ -18,25 +18,24 @@
     <br />
     <div class="file-upload">
         <div class="file-select">
-            <div class="file-select-button" id="fileName">Upload Endereços</div>
+            <div class="file-select-button" id="fileName">Upload automático</div>
             <div class="file-select-name" id="noFile">Adicione um arquivo...</div>
             <input type="file" name="chooseFile" id="excel-upload">
         </div>
     </div>
     <br />
     <div class="row">
-        <button type="button" class="btn btn-success file-loading importar" accept=".xlsx" onclick="UploadEnderecos()" style="margin-left:15px">Enviar Upload</button>
-        <button type="button" class="btn btn-danger" style="margin-left:5px">Deletar Arquivo</button>
-        <button type="button" onclick="BaixarModelo()" class="btn btn-secondary" style="margin-left:5px">Baixar Modelo</button>
+        <button type="button" onclick="BaixarModelo()" class="btn btn-secondary" style="margin-left:15px">Baixar Modelo</button>
     </div>
     <br />
+    <h2> Movimentações: </h2>
     <table class="table table-striped" id="listar-beneficiarios">
         <thead>
             <tr>
                 <th scope="col">Endereco Origem:</th>
-                <th scope="col">Produro:</th>
-                <th scope="col">Endereco Destino:</th>
+                <th scope="col">Produto:</th>
                 <th scope="col">Quantidade:</th>
+                <th scope="col">Endereco Destino:</th>
                 <th scope="col">Status:</th>
             </tr>
         </thead>
@@ -44,7 +43,7 @@
         </tbody>
     </table>
 </div>
-
+<div id="loader" class="lds-dual-ring hidden overlay"></div>
 
 
 <link rel="stylesheet" type="text/css" href="/css/importacao.css">
