@@ -1,0 +1,54 @@
+﻿
+
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js" defer></script>
+
+<div class="box box-primary hidden" id="modalTable">
+    <div class="box-header with-border">
+        <h3 class="box-title"><i class="fa fa-tasks"></i>&nbsp;Gerenciador de Importações</h3>
+        <div class="box-tools pull-right">
+            <button type="button" class="btn btn-box-tool" title="Voltar" onclick=" window.history.back(); ">
+                <i class="fa fa-mail-reply"></i>
+            </button>
+            <button type="button" class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="Expandir/Retrair">
+                <i class="fa fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    <br />
+    <div class="file-upload">
+        <div class="file-select">
+            <div class="file-select-button" id="fileName">Upload Endereços</div>
+            <div class="file-select-name" id="noFile">Adicione um arquivo...</div>
+            <input type="file" name="chooseFile" id="excel-upload">
+        </div>
+    </div>
+    <br />
+    <div class="row">
+        <button type="button" class="btn btn-success file-loading importar" accept=".xlsx" onclick="UploadEnderecos()" style="margin-left:15px">Enviar Upload</button>
+        <button type="button" class="btn btn-danger" style="margin-left:5px">Deletar Arquivo</button>
+        <button type="button" onclick="BaixarModelo()" class="btn btn-secondary" style="margin-left:5px">Baixar Modelo</button>
+    </div>
+    <br />
+    <table class="table table-striped" id="listar-beneficiarios">
+        <thead>
+            <tr>
+                <th scope="col">Endereco Origem:</th>
+                <th scope="col">Produro:</th>
+                <th scope="col">Endereco Destino:</th>
+                <th scope="col">Quantidade:</th>
+                <th scope="col">Status:</th>
+            </tr>
+        </thead>
+        <tbody id="corpo">
+        </tbody>
+    </table>
+</div>
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/importacao.css">
+<script src="/js/Movimentacao.js"></script>
+
+
+
